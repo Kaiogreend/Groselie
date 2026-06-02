@@ -53,9 +53,6 @@ h1,h2,h3,h4,h5{font-family:'Cormorant Garamond',serif}
 .login-btn:hover{background:var(--rose-dark);transform:translateY(-2px)}
 .login-err{background:#FFEBEE;color:#C62828;border-radius:10px;padding:0.7rem 1rem;font-size:0.78rem;margin-top:1rem;display:none}
 .login-err.show{display:block}
-.lock-msg{background:#FFF3E0;color:#E65100;border-radius:10px;padding:0.8rem 1rem;font-size:0.78rem;margin-top:1rem;display:none}
-.lock-msg.show{display:block}
-.attempt-info{font-size:0.72rem;color:var(--text-light);margin-top:0.8rem}
 
 /* ── NAV ── */
 nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(251,246,240,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;height:70px;display:flex;align-items:center;justify-content:space-between;transition:box-shadow 0.3s}
@@ -400,10 +397,10 @@ footer{background:var(--text-dark);color:white;padding:4rem 2rem 2rem}
   <div class="login-box">
     <div class="login-logo">G Rosélie</div>
     <div class="login-sub">Área Administrativa</div>
-    <div class="login-title">Acesso restrito · Entre com suas credenciais</div>
+    <div class="login-title">Acesso restrito · Entre com seu e-mail e senha do Supabase</div>
     <div class="login-field">
       <span class="fi">👤</span>
-      <input type="text" id="login-user" placeholder="Usuário" autocomplete="username">
+      <input type="email" id="login-user" placeholder="E-mail administrativo" autocomplete="email">
     </div>
     <div class="login-field">
       <span class="fi">🔒</span>
@@ -412,8 +409,6 @@ footer{background:var(--text-dark);color:white;padding:4rem 2rem 2rem}
     </div>
     <button class="login-btn" onclick="doLogin()">Entrar no Painel</button>
     <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
-    <div class="lock-msg" id="lock-msg">🔒 Acesso bloqueado temporariamente.</div>
-    <div class="attempt-info" id="attempt-info"></div>
   </div>
 </div>
 
@@ -699,17 +694,20 @@ footer{background:var(--text-dark);color:white;padding:4rem 2rem 2rem}
   </div>
 </div>
 
-<!-- ═══ CHANGE PASSWORD ═══ -->
+<!-- ═══ CHANGE PASSWORD (informativo — gerenciado pelo Supabase) ═══ -->
 <div class="cp-overlay" id="cpOverlay">
   <div class="cp-box">
     <h3>🔑 Alterar Senha</h3>
-    <div class="form-group" style="margin-bottom:1rem"><label>Senha Atual</label><input type="password" id="cp-current" placeholder="Senha atual"></div>
-    <div class="form-group" style="margin-bottom:1rem"><label>Nova Senha (mín. 6 chars)</label><input type="password" id="cp-new" placeholder="Nova senha"></div>
-    <div class="form-group" style="margin-bottom:1.5rem"><label>Confirmar Nova Senha</label><input type="password" id="cp-confirm" placeholder="Repita a nova senha"></div>
-    <div style="display:flex;gap:0.8rem">
-      <button class="abtn abtn-save" onclick="changePassword()" style="flex:1;padding:0.7rem">Salvar</button>
-      <button class="abtn" onclick="document.getElementById('cpOverlay').classList.remove('open')" style="flex:1;padding:0.7rem">Cancelar</button>
+    <div style="background:#E8F5E9;border:1px solid #A5D6A7;border-radius:12px;padding:1.2rem;margin-bottom:1.5rem;font-size:0.85rem;color:#2E7D32;line-height:1.7">
+      <strong>A senha é gerenciada diretamente pelo Supabase.</strong><br><br>
+      Para alterar sua senha:<br>
+      1. Acesse <strong>supabase.com</strong><br>
+      2. Vá em <strong>Authentication → Users</strong><br>
+      3. Clique nos 3 pontinhos ao lado do seu e-mail<br>
+      4. Clique em <strong>"Send password reset"</strong><br>
+      5. Verifique seu e-mail e redefina a senha
     </div>
+    <button class="abtn" onclick="document.getElementById('cpOverlay').classList.remove('open')" style="width:100%;padding:0.8rem">Fechar</button>
   </div>
 </div>
 
@@ -875,22 +873,13 @@ function initSupabase() {
 }
 
 // ════════════════════════════════════════
-// AUTH (localStorage for admin credentials)
+// AUTH — 100% via Supabase Auth
+// Login: e-mail + senha cadastrados em
+// Authentication → Users no painel Supabase
 // ════════════════════════════════════════
-const AUTH_KEY  = 'groselie_auth';
-const SESS_KEY  = 'groselie_session';
-const LOG_KEY   = 'groselie_log';
-const DEF_AUTH  = { username:'admin', password:'groselie2025', attempts:0, lockedUntil:null };
-
-function getAuth()       { return JSON.parse(localStorage.getItem(AUTH_KEY)||'null')||{...DEF_AUTH}; }
-function saveAuth(o)     { localStorage.setItem(AUTH_KEY, JSON.stringify(o)); }
-function getSession()    { return JSON.parse(sessionStorage.getItem(SESS_KEY)||'null'); }
-function setSession(o)   { sessionStorage.setItem(SESS_KEY, JSON.stringify(o)); }
-function clearSession()  { sessionStorage.removeItem(SESS_KEY); }
-function getLog()        { return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }
-function addLog(e)       { const l=getLog(); l.unshift(e); if(l.length>20)l.pop(); localStorage.setItem(LOG_KEY,JSON.stringify(l)); }
-
-if(!localStorage.getItem(AUTH_KEY)) saveAuth({...DEF_AUTH});
+const LOG_KEY = 'groselie_log';
+function getLog()  { return JSON.parse(localStorage.getItem(LOG_KEY)||'[]'); }
+function addLog(e) { const l=getLog(); l.unshift(e); if(l.length>20)l.pop(); localStorage.setItem(LOG_KEY,JSON.stringify(l)); }
 
 // ════════════════════════════════════════
 // SUPABASE DB OPERATIONS
@@ -974,76 +963,61 @@ async function testConnection() {
 // ════════════════════════════════════════
 // LOGIN / AUTH UI
 // ════════════════════════════════════════
-function openAdminOrLogin() {
-  const s = getSession();
-  if(s && s.loggedIn) openAdmin();
+async function openAdminOrLogin() {
+  const { data: { user } } = await supabase_client.auth.getUser();
+  if(user) openAdmin();
   else showLoginScreen();
 }
 function showLoginScreen() {
   document.getElementById('login-screen').classList.add('open');
+  document.getElementById('login-err').textContent = '';
   document.getElementById('login-err').classList.remove('show');
   document.getElementById('login-user').value = '';
   document.getElementById('login-pass').value = '';
-  updateLockUI();
 }
 function hideLoginScreen() { document.getElementById('login-screen').classList.remove('open'); }
 
-function updateLockUI() {
-  const auth = getAuth();
-  const locked = auth.lockedUntil && Date.now() < auth.lockedUntil;
-  document.getElementById('lock-msg').classList.toggle('show', !!locked);
-  document.getElementById('attempt-info').textContent = auth.attempts>0&&!locked ? `Tentativas: ${auth.attempts}/5` : '';
-  if(locked) {
-    const rem = Math.ceil((auth.lockedUntil-Date.now())/1000);
-    document.getElementById('lock-msg').textContent = `🔒 Acesso bloqueado. Aguarde ${rem}s.`;
-    setTimeout(updateLockUI,1000);
-  }
-}
+async function doLogin() {
+  const email = document.getElementById('login-user').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn-main');
 
-function doLogin() {
-  const auth = getAuth();
-  if(auth.lockedUntil && Date.now()<auth.lockedUntil) { updateLockUI(); return; }
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value;
-  if(user===auth.username && pass===auth.password) {
-    auth.attempts=0; auth.lockedUntil=null; saveAuth(auth);
-    const now = new Date().toLocaleString('pt-BR');
-    setSession({loggedIn:true,username:user,loginTime:now});
-    addLog(`✅ Login: ${user} — ${now}`);
-    hideLoginScreen();
-    openAdmin();
-  } else {
-    auth.attempts=(auth.attempts||0)+1;
-    if(auth.attempts>=5){auth.lockedUntil=Date.now()+120000;auth.attempts=0;}
-    saveAuth(auth);
-    document.getElementById('login-err').classList.add('show');
-    document.getElementById('login-pass').value='';
-    updateLockUI();
-    addLog(`❌ Falha: ${user} — ${new Date().toLocaleString('pt-BR')}`);
+  if(!email || !pass) { errEl.textContent='Preencha e-mail e senha.'; errEl.classList.add('show'); return; }
+
+  btn.textContent = 'Verificando...'; btn.disabled = true;
+  errEl.classList.remove('show');
+
+  const { data, error } = await supabase_client.auth.signInWithPassword({ email, password: pass });
+
+  btn.textContent = 'Entrar no Painel'; btn.disabled = false;
+
+  if(error) {
+    errEl.textContent = 'E-mail ou senha incorretos. Verifique suas credenciais.';
+    errEl.classList.add('show');
+    addLog(`❌ Falha de login: ${email} — ${new Date().toLocaleString('pt-BR')}`);
+    document.getElementById('login-pass').value = '';
+    return;
   }
+
+  const now = new Date().toLocaleString('pt-BR');
+  addLog(`✅ Login: ${data.user.email} — ${now}`);
+  hideLoginScreen();
+  openAdmin();
 }
 
 function doLogout() {
-  confirmDialog('Sair do painel?','Sua sessão será encerrada.',()=>{
-    addLog(`🚪 Logout: ${getSession()?.username} — ${new Date().toLocaleString('pt-BR')}`);
-    clearSession(); closeAdmin();
+  confirmDialog('Sair do painel?','Sua sessão será encerrada.', async ()=>{
+    addLog(`🚪 Logout — ${new Date().toLocaleString('pt-BR')}`);
+    await supabase_client.auth.signOut();
+    closeAdmin();
     showToast('Sessão encerrada. Até logo! 👋');
   });
 }
 
 function changePassword() {
-  const cur = document.getElementById('cp-current').value;
-  const nw  = document.getElementById('cp-new').value;
-  const con = document.getElementById('cp-confirm').value;
-  const auth= getAuth();
-  if(cur!==auth.password){showToast('❌ Senha atual incorreta.');return;}
-  if(nw.length<6){showToast('❌ Mínimo 6 caracteres.');return;}
-  if(nw!==con){showToast('❌ As senhas não coincidem.');return;}
-  auth.password=nw; saveAuth(auth);
-  addLog(`🔑 Senha alterada — ${new Date().toLocaleString('pt-BR')}`);
-  document.getElementById('cpOverlay').classList.remove('open');
-  ['cp-current','cp-new','cp-confirm'].forEach(id=>document.getElementById(id).value='');
-  showToast('✅ Senha alterada com sucesso!');
+  // Senha gerenciada pelo Supabase — ver instruções no modal
+  document.getElementById('cpOverlay').classList.add('open');
 }
 
 function togglePassVis(id,btn) {
@@ -1055,13 +1029,22 @@ function togglePassVis(id,btn) {
 // ════════════════════════════════════════
 // ADMIN PANEL UI
 // ════════════════════════════════════════
-function openAdmin() {
+async function openAdmin() {
   document.getElementById('admin-panel').style.display='block';
-  const s=getSession();
-  if(s){
-    document.getElementById('admin-username-badge').textContent=s.username;
-    document.getElementById('sec-user').value=s.username;
-    document.getElementById('sec-lastlogin').value=s.loginTime||'—';
+  const { data:{ user } } = await supabase_client.auth.getUser();
+  if(user) {
+    const email = user.email;
+    const now   = new Date().toLocaleString('pt-BR');
+    document.getElementById('admin-username-badge').textContent = email;
+    const secUser = document.getElementById('sec-user');
+    const secLast = document.getElementById('sec-lastlogin');
+    if(secUser) secUser.value = email;
+    if(secLast) secLast.value = now;
+    // green dot indicator
+    const btn = document.getElementById('admin-nav-btn');
+    if(btn && !btn.querySelector('.admin-dot')){
+      const dot=document.createElement('span'); dot.className='admin-dot'; btn.appendChild(dot);
+    }
   }
   loadAllData();
   renderAccessLog();
@@ -1165,7 +1148,7 @@ async function saveProduct() {
   btn.textContent='⏳ Salvando...'; btn.disabled=true;
   if(ss) ss.textContent='';
 
-  const payload={name,brand,cat,tipo,price,old_price:oldP,status,emoji,desc,destaque:dest,novo,vendido:vend};
+  const payload={name,brand,cat,tipo,price,old_price:oldP,status,emoji,descricao:desc,destaque:dest,novo,vendido:vend};
 
   let error;
   if(editingId){
@@ -1207,7 +1190,7 @@ function editProduct(id) {
   document.getElementById('f-old-price').value = p.old_price||'';
   document.getElementById('f-status').value = p.status||'stock';
   document.getElementById('f-emoji').value  = p.emoji||'💎';
-  document.getElementById('f-desc').value   = p.desc||'';
+  document.getElementById('f-desc').value   = p.descricao||'';
   document.getElementById('f-destaque').value= p.destaque?'true':'false';
   document.getElementById('f-new').value    = p.novo?'true':'false';
   document.getElementById('f-vendido').value= p.vendido?'true':'false';
@@ -1261,7 +1244,7 @@ function productCard(p) {
   const priceHTML = op
     ? `<span class="product-price-old">${fmt(op)}</span>${fmt(p.price)}`
     : fmt(p.price);
-  const desc = (p.desc||'').substring(0,80);
+  const desc = (p.descricao||'').substring(0,80);
   return `
     <div class="product-card fade-in" onclick="openModal('${p.id}')">
       <div class="product-img">
@@ -1276,7 +1259,7 @@ function productCard(p) {
         <div class="product-type">${p.tipo||''} · ${(p.cat||'').charAt(0).toUpperCase()+(p.cat||'').slice(1)}</div>
         <div class="product-name">${p.name}</div>
         <div class="product-brand">${p.brand||''}</div>
-        <div class="product-desc">${desc}${p.desc&&p.desc.length>80?'...':''}</div>
+        <div class="product-desc">${desc}${p.descricao&&p.descricao.length>80?'...':''}</div>
         <div class="product-footer">
           <div class="product-price">${priceHTML}</div>
           ${p.status!=='sold'
@@ -1340,7 +1323,7 @@ function openModal(id) {
     <div class="modal-brand">${p.brand||''}</div>
     <span class="product-status ${statusClass(p.status)}" style="position:static;display:inline-block;margin-bottom:1rem">${statusLabel(p.status)}</span>
     <div class="modal-price">${priceHTML}</div>
-    <div class="modal-desc">${p.desc||''}</div>
+    <div class="modal-desc">${p.descricao||''}</div>
     ${p.status!=='sold'
       ?`<button class="btn-primary" style="width:100%;margin-top:1rem" onclick="addToCart('${p.id}');closeModal()">+ Adicionar ao Carrinho</button>`
       :`<p style="color:#C62828;font-size:0.85rem;margin-top:1rem;background:#FFEBEE;padding:0.8rem;border-radius:10px">Este produto está esgotado no momento.</p>`}
@@ -1392,7 +1375,7 @@ function renderCart() {
       <div class="cart-item-info">
         <div class="cart-item-name">${item.name}</div>
         <div class="cart-item-price">${fmt(item.price)} × ${item.qty} = <strong>${fmt(item.price*item.qty)}</strong></div>
-        <div class="cart-item-desc">${(item.desc||'').substring(0,55)}${item.desc&&item.desc.length>55?'...':''}</div>
+        <div class="cart-item-desc">${(item.descricao||'').substring(0,55)}${item.descricao&&item.descricao.length>55?'...':''}</div>
         <div class="cart-qty">
           <button class="qty-btn" onclick="changeQty('${item.id}',-1)">−</button>
           <span class="qty-num">${item.qty}</span>
@@ -1449,7 +1432,7 @@ async function doSendWhatsApp() {
     msg+=`${i+1}. *${item.name}*\n`;
     msg+=`   📦 Quantidade: ${item.qty}\n`;
     msg+=`   🏷️ ID do Produto: ${item.id}\n`;
-    msg+=`   📝 ${(item.desc||'').substring(0,60)}${item.desc&&item.desc.length>60?'...':''}\n`;
+    msg+=`   📝 ${(item.descricao||'').substring(0,60)}${item.descricao&&item.descricao.length>60?'...':''}\n`;
     msg+=`   💰 ${fmt(item.price)} × ${item.qty} = *${fmt(item.price*item.qty)}*\n\n`;
   });
   msg+='━━━━━━━━━━━━━━━━━━━━\n';
@@ -1528,6 +1511,14 @@ window.addEventListener('scroll',()=>{
 // ════════════════════════════════════════
 async function init() {
   const ok = initSupabase();
+
+  // Listener: se sessão mudar (logout em outra aba, etc.), fechar painel
+  if(ok) {
+    supabase_client.auth.onAuthStateChange((event, session) => {
+      if(event === 'SIGNED_OUT') { closeAdmin(); }
+    });
+  }
+
   if(!ok || SUPABASE_URL.includes('COLE_SUA')) {
     // Fallback mode - show instructions
     document.getElementById('splash').innerHTML=`
