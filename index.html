@@ -407,7 +407,7 @@ footer{background:var(--text-dark);color:white;padding:4rem 2rem 2rem}
       <input type="password" id="login-pass" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
       <button class="show-pass" onclick="togglePassVis('login-pass',this)" type="button">👁️</button>
     </div>
-    <button class="login-btn" onclick="doLogin()">Entrar no Painel</button>
+    <button class="login-btn" id="login-btn-main" onclick="doLogin()">Entrar no Painel</button>
     <div class="login-err" id="login-err">Usuário ou senha incorretos.</div>
   </div>
 </div>
